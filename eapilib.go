@@ -482,7 +482,7 @@ func (conn *HTTPEapiConnection) Execute(commands []interface{},
 type HTTPSEapiConnection struct {
 	EapiConnection
 	path                string
-	enforceVerification bool
+	config				 *tls.Config
 }
 
 // DefaultHTTPSPort default port used by https
@@ -504,17 +504,32 @@ const DefaultHTTPSPath = "/command-api"
 //
 // Returns:
 //  Newly created HTTPSEapiConnection
+
 func NewHTTPSEapiConnection(transport string, host string, username string,
 	password string, port int) EapiConnectionEntity {
+	return NewHTTPSEapiConnectionTLS(transport, host, username, password, port, &tls.Config{
+			InsecureSkipVerify: true,
+		})
+}
+
+func NewHTTPSEapiConnectionTLS(transport string, host string, username string,
+	password string, port int, tlsConfig *tls.Config) EapiConnectionEntity {
 	if port == UseDefaultPortNum {
 		port = DefaultHTTPSPort
 	}
 	path := DefaultHTTPSPath
 
-	conn := EapiConnection{transport: transport, host: host, port: port, timeOut: 60, disableKeepAlive: false}
+	conn := EapiConnection{transport: transport,
+		host: host, port: port, 
+		timeOut: 60, disableKeepAlive: false,
+	}
 
 	conn.Authentication(username, password)
-	return &HTTPSEapiConnection{path: path, EapiConnection: conn}
+	return &HTTPSEapiConnection{
+		path: path, 
+		config: tlsConfig,
+		EapiConnection: conn,
+	}
 }
 
 // send the eAPI request to the destination node
@@ -536,7 +551,7 @@ func (conn *HTTPSEapiConnection) send(data []byte) (*JSONRPCResponse, error) {
 	timeOut := time.Duration(time.Duration(conn.timeOut) * time.Second)
 	url := conn.getURL()
 	tr := &http.Transport{
-		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig:   conn.config,
 		DisableKeepAlives: conn.disableKeepAlive,
 	}
 	client := &http.Client{
@@ -595,12 +610,3 @@ func (conn *HTTPSEapiConnection) Execute(commands []interface{},
 	return conn.send(data)
 }
 
-// disableCertificateVerification disables https verification
-func (conn *HTTPSEapiConnection) disableCertificateVerification() {
-	conn.enforceVerification = false
-}
-
-// enableCertificateVerification enables https verification
-func (conn *HTTPSEapiConnection) enableCertificateVerification() {
-	conn.enforceVerification = true
-}

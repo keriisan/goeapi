@@ -716,6 +716,10 @@ func Connect(transport string, host string, username string, passwd string,
 	return &Node{conn: conn, autoRefresh: true}, nil
 }
 
+func Connect2(conn EapiConnectionEntity) *Node {
+	return &Node{conn: conn, autoRefresh: true}
+}
+
 // Connection creates a connection using the supplied settings
 //
 // This function will create a connection to an Arista EOS node using
@@ -758,6 +762,8 @@ func Connection(transport string, host string, username string, passwd string,
 	obj := transFunc(transport, host, username, passwd, port)
 	return obj, nil
 }
+
+
 
 // expandPath expands out the '~' if specified within the path
 //
